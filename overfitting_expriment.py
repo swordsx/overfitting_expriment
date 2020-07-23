@@ -1,6 +1,6 @@
 import torch
 def f(x):
-    w = torch.Tensor([15, 10]).unsqueeze(1)
+    w = torch.Tensor([2, 3]).unsqueeze(1)
     return x.mm(w)
 x_train_real = torch.Tensor([[ 0.9466, -1.9782],
         [-0.1369, -0.5264],
@@ -77,9 +77,13 @@ def make_feature(x_real, x_fake=None, use_x_fake=False, use_x2=False):
     if use_x2:
         result = torch.cat([result, x2], 1)
     if use_x_fake:
-        result = torch.cat([result, x_fake, x1 ** 3, x1 ** 5, x1 ** 7, x1 ** 9], 1)
+        result = torch.cat([result, x_fake, x1 ** 2, x1 ** 3, x1 ** 4, x1 ** 5, x1 ** 6, x1 ** 7, x1 ** 8, x1 ** 9], 1)
+        #result = torch.cat([result] + [x1 ** i for i in range(2, 15)], 1)
     return result
-    
+
+print(x_train_real)
+print(y_train)
+
 from torch import nn
 class poly_model(nn.Module):
     def __init__(self, use_x_fake=False, use_x2=False):
@@ -88,19 +92,19 @@ class poly_model(nn.Module):
         if use_x2:
             n_input_features += 1
         if use_x_fake:
-            n_input_features += 9
+            n_input_features += 13
         self.poly = nn.Linear(n_input_features ,1)
     def forward(self,input):
         output = self.poly(input)
         return output
-
 import matplotlib.pyplot as plt
 def train_model(use_x_fake=False, use_x2=False):
+    torch.manual_seed(0)
     model = poly_model(use_x_fake, use_x2)
     criterion = nn.MSELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
 
-    N_EPOCH = 100000
+    N_EPOCH = 500
     losses_train = []
     losses_test = []
     for epoch in range(N_EPOCH):
@@ -116,18 +120,17 @@ def train_model(use_x_fake=False, use_x2=False):
             output_test = model(x_test)
             loss_test = criterion(output_test, y_test)
         
-        if epoch % 1000 == 0:
+        if epoch % 10 == 9:
             name, param = list(model.named_parameters())[0]
             losses_train.append(loss_train.data)
             losses_test.append(loss_test.data)
-            print("epoch = %d, loss = %f, loss_test = %f, weights =" %(epoch, loss_train.data, loss_test.data), param.data)
+            print("epoch = %d, loss = %f, loss_test = %f, weights =" %(epoch + 1, loss_train.data, loss_test.data), param.data)
     plt.plot(losses_train, '-b', label="loss_train")
     plt.plot(losses_test, '-r', label="loss_test")
     plt.legend(loc='upper right')
     plt.show()
     
-    
-train_model(use_x2=False, use_x_fake=False)
-train_model(use_x2=True, use_x_fake=False)
-train_model(use_x2=False, use_x_fake=True)
-train_model(use_x2=True, use_x_fake=True)
+    train_model(use_x2=False, use_x_fake=False)
+    train_model(use_x2=True, use_x_fake=False)
+    train_model(use_x2=False, use_x_fake=True)
+    train_model(use_x2=True, use_x_fake=True)
